@@ -4,43 +4,232 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chat App</title>
-    <script>
-        var username = prompt("Enter your username:");
-        var ws = new WebSocket("ws://" + window.location.host + "/ws/" + username);
-        ws.onmessage = function (event) {
-            var message = JSON.parse(event.data);
-            var node = document.createElement("DIV");
-            var textnode = document.createTextNode(message.username + ": " + message.content);
-            node.appendChild(textnode);
-            document.getElementById("chat").appendChild(node);
-        };
+    <title>Fancy Chat App</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Pacifico&display=swap');
 
-        ws.onopen = function (event) {
-            console.log("Connected to the WebSocket server");
-        };
-
-        ws.onclose = function (event) {
-            console.log("Disconnected from the WebSocket server");
-        };
-
-        ws.onerror = function (event) {
-            console.error("WebSocket error observed:", event);
-        };
-
-        function sendMessage() {
-            var message = document.getElementById("message").value;
-            ws.send(message);
-            document.getElementById("message").value = "";
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f4f8;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            flex-direction: column;
         }
+
+        #modal {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+
+        #modal-content {
+            background-color: #ffffff;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        #chat-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        #chat-container {
+            width: 100%;
+            max-width: 800px;
+            background-color: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        #chat {
+            padding: 20px;
+            height: 500px;
+            overflow-y: auto;
+            border-bottom: 1px solid #ddd;
+        }
+
+        #chat div {
+            margin-bottom: 10px;
+            padding: 10px;
+            border-radius: 8px;
+            max-width: 80%;
+        }
+
+        .message-self {
+            background-color: #e1f7d5;
+            margin-left: auto;
+            color: black;
+        }
+
+        .message-other {
+            background-color: #ffffff;
+            border: 1px solid #ddd;
+            margin-right: auto;
+            color: black;
+        }
+
+        #input-container {
+            display: flex;
+            padding: 10px;
+        }
+
+        #message {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            margin-right: 10px;
+        }
+
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            background-color: #007bff;
+            color: #ffffff;
+            cursor: pointer;
+        }
+
+        button:disabled {
+            background-color: #ddd;
+            cursor: not-allowed;
+        }
+
+        .username {
+            font-weight: bold;
+        }
+
+        .username-color-1 {
+            color: #ff6f61;
+        }
+
+        .username-color-2 {
+            color: #6b5b95;
+        }
+
+        .username-color-3 {
+            color: #88b04b;
+        }
+
+        .username-color-4 {
+            color: #f7cac9;
+        }
+
+        .username-color-5 {
+            color: #92a8d1;
+        }
+
+        h1 {
+            text-align: center;
+            color: #ff6347;
+            font-size: 3rem;
+            margin-bottom: 20px;
+            font-family: 'Pacifico', cursive;
+        }
+    </style>
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const colors = ['username-color-1', 'username-color-2', 'username-color-3', 'username-color-4', 'username-color-5'];
+            const userColors = {};
+            let username = '';
+
+            function randomColorClass() {
+                return colors[Math.floor(Math.random() * colors.length)];
+            }
+
+            function showModal() {
+                const modal = document.createElement('div');
+                modal.id = 'modal';
+                modal.innerHTML = `
+                    <div id="modal-content">
+                        <h2>Enter your username</h2>
+                        <input type="text" id="username" placeholder="Username">
+                        <button onclick="startChat()">Start Chatting</button>
+                    </div>
+                `;
+                document.body.appendChild(modal);
+            }
+
+            window.startChat = function () {
+                username = document.getElementById('username').value.trim();
+                if (username) {
+                    document.getElementById('modal').remove();
+                    initializeWebSocket();
+                } else {
+                    alert('Please enter a username');
+                }
+            }
+
+            function initializeWebSocket() {
+                const ws = new WebSocket(`ws://${window.location.host}/ws/${username}`);
+
+                ws.onmessage = function (event) {
+                    const message = JSON.parse(event.data);
+                    if (!userColors[message.username]) {
+                        userColors[message.username] = randomColorClass();
+                    }
+                    const node = document.createElement('div');
+                    const usernameSpan = document.createElement('span');
+                    usernameSpan.className = `username ${userColors[message.username]}`;
+                    usernameSpan.textContent = `${message.username}: `;
+                    node.appendChild(usernameSpan);
+                    node.appendChild(document.createTextNode(message.content));
+                    node.className = message.username === username ? 'message-self' : 'message-other';
+                    document.getElementById('chat').appendChild(node);
+                    document.getElementById('chat').scrollTop = document.getElementById('chat').scrollHeight;
+                };
+
+                ws.onopen = function () {
+                    console.log("Connected to the WebSocket server");
+                };
+
+                ws.onclose = function () {
+                    console.log("Disconnected from the WebSocket server");
+                };
+
+                ws.onerror = function (event) {
+                    console.error("WebSocket error observed:", event);
+                };
+
+                window.sendMessage = function () {
+                    const message = document.getElementById('message').value;
+                    if (message) {
+                        ws.send(message);
+                        document.getElementById('message').value = "";
+                    }
+                };
+            }
+
+            showModal();
+        });
     </script>
 </head>
 
 <body>
-    <h1>Chat App</h1>
-    <div id="chat"></div>
-    <input type="text" id="message" placeholder="Type your message...">
-    <button onclick="sendMessage()">Send</button>
+    <div id="chat-wrapper">
+        <h1>Fancy Chat</h1>
+        <div id="chat-container">
+            <div id="chat"></div>
+            <div id="input-container">
+                <input type="text" id="message" placeholder="Type your message...">
+                <button onclick="sendMessage()">Send</button>
+            </div>
+        </div>
+    </div>
 </body>
 
 </html>
