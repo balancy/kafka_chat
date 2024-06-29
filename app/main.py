@@ -1,14 +1,16 @@
 """Main module for the chat application."""
-import asyncio
+
+from __future__ import annotations
+
 import logging
 from contextlib import asynccontextmanager
-from typing import Any, AsyncGenerator, Generator
+from pathlib import Path
+from typing import Any, AsyncGenerator
 
 from fastapi import FastAPI, WebSocket
 from fastapi.responses import HTMLResponse
 
 from app.kafka_consumer import consume_messages_async
-from app.kafka_producer import publish_message
 from app.models import Message
 
 logging.basicConfig(level=logging.INFO)
@@ -18,6 +20,7 @@ app = FastAPI()
 
 connected_users = set()
 websocket_connections = {}
+
 
 @app.websocket("/ws/{username}")
 async def websocket_endpoint(websocket: WebSocket, username: str) -> None:
@@ -34,35 +37,38 @@ async def websocket_endpoint(websocket: WebSocket, username: str) -> None:
             logger.info(f"Received message from {username}: {data}")
 
             logger.info(f"Message to broadcast: {message}")
-            for _, ws in websocket_connections.items():
+            for ws in websocket_connections.values():
                 await ws.send_json(message)
-    except Exception as e:
-        logger.error(f"WebSocket connection closed for {username}: {str(e)}")
+    except Exception:
+        logger.exception(f"WebSocket connection closed for {username}")
         connected_users.remove(username)
         del websocket_connections[username]
 
 
 @app.get("/", response_class=HTMLResponse)
-async def homepage() -> HTMLResponse:
+def homepage() -> HTMLResponse:
     """Homepage for the chat application."""
-    return HTMLResponse(content=open("app/templates/chat.html", "r").read())
+    file_path = Path("app/templates/chat.html")
+    with file_path.open() as file:
+        content = file.read()
+    return HTMLResponse(content=content)
 
 
 @app.get("/messages", response_model=list[Message])
 async def get_messages() -> list[Any]:
     """Get messages from Kafka topic."""
-    messages = []
-    async for message in consume_messages_async():
-        messages.append(Message(**message))
-    return messages
+    return [Message(**message) async for message in consume_messages_async()]
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, Any]:
-    """Context manager to handle the lifespan of the application.
+    """
+    Context manager to handle the lifespan of the application.
 
     Args:
+    ----
         app (FastAPI): FastAPI application.
+
     """
     logger.info("Starting up the application.")
 
@@ -81,7 +87,7 @@ async def consume_messages_and_broadcast() -> None:
     try:
         async for message in consume_messages_async():
             logger.info(f"Broadcasting message: {message}")
-            for _, websocket in websocket_connections.items():
+            for websocket in websocket_connections.values():
                 await websocket.send_json(message)
-    except Exception as e:
-        logger.error(f"Error in consume_messages_and_broadcast: {str(e)}")
+    except Exception:
+        logger.exception("Error in consume_messages_and_broadcast.")

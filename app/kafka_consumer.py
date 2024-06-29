@@ -1,4 +1,5 @@
 """Kafka consumer module."""
+
 import asyncio
 import json
 import logging
@@ -10,12 +11,13 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 consumer = KafkaConsumer(
-    'chat_topic',
-    bootstrap_servers='localhost:9092',
-    group_id='chat-group',
-    value_deserializer=lambda m: json.loads(m.decode('utf-8')),
-    auto_offset_reset='latest'
+    "chat_topic",
+    bootstrap_servers="localhost:9092",
+    group_id="chat-group",
+    value_deserializer=lambda m: json.loads(m.decode("utf-8")),
+    auto_offset_reset="latest",
 )
+
 
 async def consume_messages_async() -> AsyncGenerator[Any, NoReturn]:
     """Consume messages from a Kafka topic asynchronously."""

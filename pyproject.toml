@@ -1,7 +1,7 @@
 [tool.ruff]
 line-length = 80
 lint.select = ["ALL"]
-lint.ignore = ["D203", "D212"]
+lint.ignore = ["D203", "D212", "G004", "ARG001"]
 exclude = [".venv"]
 
 [tool.ruff.lint.mccabe]
