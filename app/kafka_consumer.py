@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 consumer = KafkaConsumer(
     "chat_topic",
-    bootstrap_servers="localhost:9092",
+    bootstrap_servers="kafka:9092",
     group_id="chat-group",
     value_deserializer=lambda m: json.loads(m.decode("utf-8")),
     auto_offset_reset="latest",
